@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>妳的小小心情站</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+      font-family: "微軟正黑體", sans-serif;
+      color: #444;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #c2185b;
+      margin-bottom: 10px;
+    }
+    .emoji-container {
+      margin: 20px 0;
+    }
+    button.emoji-btn {
+      font-size: 48px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin: 10px;
+      transition: transform 0.2s;
+    }
+    button.emoji-btn:hover {
+      transform: scale(1.3);
+    }
+    #result {
+      font-size: 22px;
+      margin-top: 20px;
+      color: #880e4f;
+      min-height: 48px;
+    }
+    #resetBtn {
+      margin-top: 30px;
+      padding: 10px 20px;
+      border: none;
+      background-color: #f06292;
+      color: white;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: none;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="snow"></canvas>
+
+<h1>今天妳的心情？</h1>
+<div class="emoji-container">
+  <button class="emoji-btn" data-key="happy">😊</button>
+  <button class="emoji-btn" data-key="tired">😴</button>
+  <button class="emoji-btn" data-key="sad">😢</button>
+  <button class="emoji-btn" data-key="angry">😠</button>
+  <button class="emoji-btn" data-key="love">😍</button>
+</div>
+
+<div id="result"></div>
+<audio id="audioPlayer" controls></audio>
+<button id="resetBtn">重新選擇心情</button>
+
+<script>
+  const emojiButtons = document.querySelectorAll(".emoji-btn");
+  const resultDiv = document.getElementById("result");
+  const resetBtn = document.getElementById("resetBtn");
+  const audioPlayer = document.getElementById("audioPlayer");
+
+  // 音樂清單 (範例使用 Google Drive 直鏈，請換成你的)
+  const musicList = [
+    "https://drive.google.com/file/d/1gN8XRAIK3GSSx9tjYfiEn-f4SrsPgjcz/view?usp=drive_link",
+    "https://drive.google.com/file/d/1RMNbvwKUmktherC0Nf-xSiaAutI4gOvs/view?usp=drive_link",
+    "https://drive.google.com/file/d/1sYGkDeI4Jorqfjx0aVSHgnbPOyc7U5NZ/view?usp=drive_link",
+    "https://drive.google.com/file/d/1oBwFe6VmOuvuETcaJBQF0BFkoDZH2uO5/view?usp=drive_link",
+    "https://drive.google.com/file/d/1kNYC6osjmlp7VDUOh87L5hTbaWgmsp7W/view?usp=drive_link",
+    "https://drive.google.com/file/d/14E1cz--hxUEwUg-ZayEQDHb3oZeUJash/view?usp=drive_link",
+    "https://drive.google.com/file/d/18AqFM3Puh0j3ekbW0c0zYxPHNGTX0reP/view?usp=drive_link"
+  ];
+
+  let currentMusicIndex = 0;
+  audioPlayer.src = musicList[currentMusicIndex];
+  audioPlayer.addEventListener("ended", () => {
+    currentMusicIndex = (currentMusicIndex + 1) % musicList.length;
+    audioPlayer.src = musicList[currentMusicIndex];
+    audioPlayer.play();
+  });
+
+  // 心情語錄，每個至少5句
+  const messages = {
+    happy: [
+      "看到妳的笑容，今天的陽光都變甜了。",
+      "妳開心的樣子，是我最喜歡的畫面。",
+      "希望今天的快樂，能停留久一點。",
+      "有妳開心的消息，我也跟著心情好。",
+      "感謝妳今天的笑，讓世界多了份溫暖。"
+    ],
+    tired: [
+      "妳累了嗎？如果可以，我想成為讓妳放鬆的人。",
+      "想偷偷為妳打氣，撐過今天，晚點好好休息吧。",
+      "再多辛苦，妳也還是我心中最美的人。",
+      "不管有多忙，請記得喘口氣。",
+      "累了就停一下，別為了別人忘了自己。"
+    ],
+    sad: [
+      "想成為那個，讓妳靠一下的人。",
+      "妳可以難過，沒關係，我不會走開。",
+      "如果妳想，我可以安靜地陪著妳。",
+      "今天的淚水，讓我偷偷幫妳擦掉好嗎？",
+      "願我可以讓妳的難過，少一點點。"
+    ],
+    angry: [
+      "妳的情緒，我想接住，不想妳悶在心裡。",
+      "不管妳有多氣，妳還是那個我在乎的人。",
+      "等妳氣消，我想約妳吃妳最愛的甜食。",
+      "偶爾生氣也是妳可愛的表情之一。",
+      "如果可以，我想聽妳把不滿全講出來。"
+    ],
+    love: [
+      "不想多說什麼大道理，只想告訴妳，今天也想妳。",
+      "有妳在的畫面，就足夠讓我心動。",
+      "每次想到妳，嘴角總是不自覺上揚。",
+      "謝謝妳出現在我生命裡，讓我的世界更溫暖。",
+      "今天，也是想對妳說：好喜歡妳。"
+    ]
+  };
+
+  const usedMessages = {
+    happy: [],
+    tired: [],
+    sad: [],
+    angry: [],
+    love: []
+  };
+
+  function getTodayKey() {
+    const d = new Date();
+    return d.toISOString().slice(0,10);
+  }
+
+  function checkTodayMood() {
+    const today = getTodayKey();
+    return localStorage.getItem("mood_" + today);
+  }
+
+  function getRandomMessage(key) {
+    const pool = messages[key];
+    const used = usedMessages[key];
+
+    if (used.length >= pool.length) {
+      usedMessages[key] = []; // 全部用過一次後重置
+    }
+
+    let available = pool.filter(msg => !used.includes(msg));
+    let selected = available[Math.floor(Math.random() * available.length)];
+    usedMessages[key].push(selected);
+    return selected;
+  }
+
+  function showResult(key) {
+    if (key && messages[key]) {
+      const msg = getRandomMessage(key);
+      resultDiv.textContent = msg;
+      audioPlayer.play();
+      resetBtn.style.display = "inline-block";
+    }
+  }
+
+  function setMood(key) {
+    const today = getTodayKey();
+    localStorage.setItem("mood_" + today, key);
+    showResult(key);
+    emojiButtons.forEach(b => b.disabled = true);
+  }
+
+  function init() {
+    const todayMood = checkTodayMood();
+    if (todayMood) {
+      showResult(todayMood);
+      emojiButtons.forEach(btn => btn.disabled = true);
+    } else {
+      emojiButtons.forEach(btn => btn.disabled = false);
+      resultDiv.textContent = "";
+      resetBtn.style.display = "none";
+    }
+  }
+
+  emojiButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-key");
+      setMood(key);
+    });
+  });
+
+  resetBtn.addEventListener("click", () => {
+    const today = getTodayKey();
+    localStorage.removeItem("mood_" + today);
+    init();
+  });
+
+  init();
+
+  // 雪花動畫
+  const canvas = document.getElementById('snow');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let snowflakes = [];
+
+  function initSnow() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    snowflakes = [];
+    for (let i = 0; i < 100; i++) {
+      snowflakes.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 4 + 1,
+        d: Math.random() * 1 + 0.5
+      });
+    }
+  }
+
+  function drawSnow() {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    snowflakes.forEach(flake => {
+      ctx.moveTo(flake.x, flake.y);
+      ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
+    });
+    ctx.fill();
+    moveSnow();
+  }
+
+  function moveSnow() {
+    snowflakes.forEach(flake => {
+      flake.y += flake.d;
+      flake.x += Math.sin(flake.y * 0.01);
+      if (flake.y > height) {
+        flake.y = -flake.r;
+        flake.x = Math.random() * width;
+      }
+    });
+  }
+
+  window.addEventListener('resize', initSnow);
+  initSnow();
+  setInterval(drawSnow, 33);
+</script>
+
+</body>
+</html>
